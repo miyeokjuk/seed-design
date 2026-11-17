@@ -140,6 +140,26 @@ bun build ./src/my-generator.ts --outfile=./lib/my-generator.js
 bun rootage token-css ./src --generator ./lib/my-generator.js --prefix my-system
 ```
 
+### 컴포넌트 스펙 생성기
+
+`component-spec`도 `--generator`를 받습니다. 생성기는 컴포넌트 스펙과 옵션을 받아, 출력 디렉터리 기준 경로와 코드의 배열을 반환해야 합니다. 타입은 `@seed-design/rootage-core/generator`의 `ComponentSpecGeneratorFunction`입니다.
+
+```typescript
+import { typescript } from "@seed-design/rootage-core";
+import type { ComponentSpecGeneratorFunction } from "@seed-design/rootage-core/generator";
+
+const generate: ComponentSpecGeneratorFunction = (ast, options) =>
+  typescript
+    .createStringifier({ ...options, formatDimension: ({ value, unit }) => `${value}${unit}` })
+    .getComponentSpecFiles(ast.componentSpecs);
+
+export default generate;
+```
+
+```bash
+rootage component-spec ./vars/component --generator ./lib/my-component-spec.js --prefix my-system
+```
+
 ## 마이그레이션 가이드
 
 Rootage에서 디자인 시스템별 로직을 분리할 때:

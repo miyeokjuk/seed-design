@@ -15,7 +15,7 @@ import {
   tailwind4,
   validate,
 } from "@seed-design/rootage-core";
-import { runGenerator } from "@seed-design/rootage-core/generator";
+import { runComponentSpecGenerator, runGenerator } from "@seed-design/rootage-core/generator";
 import fs from "fs-extra";
 import path from "node:path";
 import YAML from "yaml";
@@ -142,55 +142,26 @@ async function writeComponentSpec(
   dir: string,
   prefix?: string,
   filter?: NonNullable<Config["component-spec"]>["filter"],
+  generatorPath?: string,
 ) {
   const { ctx } = await prepare();
-
-  const tsStringifier = typescript.createStringifier({
-    prefix,
-    resolveTokenValues: createTokenValuesResolver(ctx),
-  });
 
   const specs = getComponentSpecEntries(ctx)
     .filter((entry) => filter?.(entry) ?? true)
     .map(({ spec }) => spec);
+  const options = { prefix, resolveTokenValues: createTokenValuesResolver(ctx) };
 
-  for (const spec of specs) {
-    const mjsCode = tsStringifier.getComponentSpecMjs(spec);
-    const mjsWritePath = path.join(process.cwd(), dir, `${spec.id}.mjs`);
+  const files = generatorPath
+    ? await runComponentSpecGenerator(generatorPath, { componentSpecs: specs }, options)
+    : typescript.createStringifier(options).getComponentSpecFiles(specs);
 
+  for (const file of files) {
     writeFileSync({
-      filename: spec.id,
-      code: mjsCode,
-      writePath: mjsWritePath,
-    });
-
-    const dtsCode = tsStringifier.getComponentSpecDts(spec);
-    const dtsWritePath = path.join(process.cwd(), dir, `${spec.id}.d.ts`);
-
-    writeFileSync({
-      filename: spec.id,
-      code: dtsCode,
-      writePath: dtsWritePath,
+      filename: file.path,
+      code: file.code,
+      writePath: path.join(process.cwd(), dir, file.path),
     });
   }
-
-  const mjsIndexCode = tsStringifier.getComponentSpecIndexMjs(specs);
-  const mjsIndexWritePath = path.join(process.cwd(), dir, "index.mjs");
-
-  writeFileSync({
-    filename: "index",
-    code: mjsIndexCode,
-    writePath: mjsIndexWritePath,
-  });
-
-  const dtsIndexCode = tsStringifier.getComponentSpecIndexDts(specs);
-  const dtsIndexWritePath = path.join(process.cwd(), dir, "index.d.ts");
-
-  writeFileSync({
-    filename: "index",
-    code: dtsIndexCode,
-    writePath: dtsIndexWritePath,
-  });
 }
 
 async function writeTokenCss(dir: string, generatorPath?: string, prefix?: string) {
@@ -436,14 +407,21 @@ export const commands = {
     args: "<dir>",
     describe: "Generate component specs",
     builder: (yargs) =>
-      yargs.positional("dir", dirPositional).option("prefix", prefixOption).option("config", {
-        describe: "Path to a config file (searched in the working directory when omitted)",
-        type: "string",
-      }),
-    handler: async ({ dir, prefix, config }) => {
+      yargs
+        .positional("dir", dirPositional)
+        .option("generator", {
+          describe: "Path to custom component spec generator module",
+          type: "string",
+        })
+        .option("prefix", prefixOption)
+        .option("config", {
+          describe: "Path to a config file (searched in the working directory when omitted)",
+          type: "string",
+        }),
+    handler: async ({ dir, generator, prefix, config }) => {
       console.log("Start");
       const { "component-spec": options } = await loadConfig(config);
-      await writeComponentSpec(dir, prefix, options?.filter);
+      await writeComponentSpec(dir, prefix, options?.filter, generator);
       console.log("Done");
     },
   }),
