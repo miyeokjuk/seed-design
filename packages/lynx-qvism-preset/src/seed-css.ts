@@ -1,6 +1,8 @@
 import type collections from "@seed-design/rootage-artifacts/collections";
 import { css, type AST } from "@seed-design/rootage-core";
 
+import { remToSp } from "./utils/sp";
+
 type TokenDeclaration = AST.TokenDeclaration;
 type TokenLit = AST.TokenLit;
 type ValueLit = AST.ValueLit;
@@ -20,10 +22,7 @@ type Selectors = {
  */
 function toSp(value: string): string {
   return value
-    .replace(/(?<![a-zA-Z])(\d*\.?\d+)rem\b/g, (_, num: string) => {
-      const px = Number.parseFloat(num) * 16;
-      return `${Number.parseFloat(px.toFixed(4))}sp`;
-    })
+    .replace(/(?<![a-zA-Z])(\d*\.?\d+)rem\b/g, (_, num: string) => remToSp(Number.parseFloat(num)))
     .replace(/(?<![a-zA-Z])(\d*\.?\d+)px\b/g, (_, num: string) => {
       const px = Number.parseFloat(num);
       return `${Number.parseFloat(px.toFixed(4))}sp`;
