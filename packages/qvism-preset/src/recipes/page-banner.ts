@@ -77,6 +77,8 @@ const pageBanner = defineSlotRecipe({
       gap: vars.base.enabled.content.gap,
     },
     body: {
+      // Matches the line's strut to the spans inside, or mixed font sizes grow the line box by a DPR-dependent fraction.
+      fontSize: vars.base.enabled.description.fontSize,
       lineHeight: vars.base.enabled.description.lineHeight,
 
       flexGrow: 1,
